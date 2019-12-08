@@ -1,10 +1,10 @@
 import * as Yup from 'yup';
-import { startOfHour, parseISO, isBefore, format } from 'date-fns';
+import { startOfHour, parseISO, isBefore, format, differenceInHours } from 'date-fns';
 import ptBR from 'date-fns/locale/pt-BR';
 import Appointment from '../models/Appointment';
 import User from '../models/User';
 import File from '../models/File';
-import Notification from '../../schemas/Notification';
+import Notification from '../schemas/Notification';
 
 class AppointmentController {
   async index(req, res) {
@@ -37,6 +37,7 @@ class AppointmentController {
 
     return res.json(appointments);
   }
+
   async store(req, res) {
     const schema = Yup.object().shape({
       provider_id: Yup.number().required(),
@@ -98,6 +99,35 @@ class AppointmentController {
       content: `Novo  agendamento de ${user.name} para dia ${formatedDate}`,
       user: provider_id,
     })
+
+    return res.json(appointment);
+  }
+
+  async delete(req, res) {
+    const appointment = await Appointment.findByPk(req.params.id);
+
+    // if(!appointment) {
+    //   return res
+    //     .status(404)
+    //     .json({ error: 'Appointment not found' });
+    // }
+
+    if(appointment.user_id !== req.userId) {
+      return res
+        .status(401)
+        .json({ error: 'You can not delete this assignment' });
+    }
+
+    const diffInHours = differenceInHours(appointment.date, new Date());
+
+    if(diffInHours < 2) {
+      return res
+        .status(422)
+        .json({ error: 'You can not cancel an appointment within less than two hours' });
+    }
+
+    appointment.canceled_at = new Date();
+    await appointment.save();
 
     return res.json(appointment);
   }
