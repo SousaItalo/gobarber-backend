@@ -12,7 +12,7 @@ class File extends Model {
         }
       }
     }, { sequelize });
-
+    console.log(sequelize.models)
     return this;
   }
 
